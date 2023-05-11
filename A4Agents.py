@@ -9,8 +9,10 @@ By Thomas Moerland
 """
 import numpy as np
 import random
+import math
 from queue import PriorityQueue
-from MBRLEnvironment import WindyGridworld
+from A4Environment import WindyGridworld
+
 
 class DynaAgent:
 
@@ -53,71 +55,110 @@ class DynaAgent:
         pass
 
 
-class PrioritizedSweepingAgent:
+class A2C:
 
-    def __init__(self, n_states, n_actions, learning_rate, gamma, max_queue_size=200, priority_cutoff=0.01):
-        self.n_states = n_states #initialize all variables needed
+    pass
+
+
+class QLearningAgent(object):
+
+    def __init__(self, n_actions, n_states, epsilon):
         self.n_actions = n_actions
-        self.learning_rate = learning_rate
-        self.gamma = gamma
-        self.priority_cutoff = priority_cutoff
-        self.queue = PriorityQueue()
-        self.Q_sa = np.zeros((n_states,n_actions))
-        self.transition_counts = np.zeros((n_states, n_actions, n_states))
-        self.reward_sum = np.zeros((n_states, n_actions, n_states))
-        self.simulation = np.zeros((n_states, n_actions, n_states))
+        self.n_states = n_states
+        self.epsilon = epsilon
+        self.q_list = [0] * n_states
+    
+    def get_qvalue_possible_moves(self, state, possible_actions, q_array):
+        possible_actions_qvalue_list = [0] * len(possible_actions)
+        y_location = int(state/12) #get 2D location from the 1D state
+        x_location = state%12
 
-    def select_action(self, s, epsilon):
-        highest_sa = max(self.Q_sa[s])
-        if random.random() > epsilon:
-            a = np.where(self.Q_sa[s] == highest_sa)[0][0]
+        for action in possible_actions:
+            if action == 0:
+                if y_location == 0:
+                    possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
+                else:
+                    possible_actions_qvalue_list[action] = q_array[y_location-1][x_location]
+            if action == 1:
+                if y_location == 11:
+                    possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
+                else:
+                    possible_actions_qvalue_list[action] = q_array[y_location+1][x_location]
+            if action == 2:
+                if x_location == 0:
+                    possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
+                else:
+                    possible_actions_qvalue_list[action] = q_array[y_location][x_location-1]
+            if action == 3:
+                if x_location == 11:
+                    possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
+                else:
+                    possible_actions_qvalue_list[action] = q_array[y_location][x_location+1]
+
+        return possible_actions_qvalue_list
+    
+    def select_action(self, possible_actions, q_values_possible_actions):
+        q_value_action_list = [0] * len(possible_actions)
+
+        for action in possible_actions:
+            q_value_action_list[action] = 0
+
+        highest_reward = max(q_values_possible_actions) #get the 'best' move from all the possible moves
+        index = q_values_possible_actions.index(highest_reward)
+
+        random_number = random.randrange(0, 100, 1) #get the random chance of doing a random move
+        if random_number > self.epsilon*100: #if not the case do the 'best' move found
+            a = index            
         else:
-            a = np.random.randint(0,self.n_actions)
-
-        if self.Q_sa[s,0] == self.Q_sa[s,1] == self.Q_sa[s,2] == self.Q_sa[s,3]:
-            a = np.random.randint(0,self.n_actions)
+            a = random.choice(range(self.n_actions)) #otherwhise do a random move
         return a
+
+    def cliff_update(self, state, action, q_array):
+        y_location = int(state/12) #get the 2D location from the 1D state
+        x_location = state%12
+
+        if action == 0: #make sure you have the right coordinate in the q_array in order to make that vale a cliff
+            if y_location == 0:
+                pass
+            else:
+                y_location -= 1
+        if action == 1:
+           if y_location == 11:
+               pass
+           else:
+                y_location += 1
+        if action == 2:
+            if x_location == 0:
+                pass
+            else:
+                x_location -= 1
+        if action == 3:
+            if x_location == 11:
+                pass
+            else:
+                x_location += 1
+        q_array[y_location][x_location] = -math.inf #give the cliff a value so that it won't get chosen again
+        pass
+
+    def update_qlearning(self, state, next_state, possible_actions, reward, alpha, gamma, q_array):
+        y_location = int(state/12) #get the 2D location from the 1D state
+        x_location = state%12
+      
         
-    def update(self,s,a,r,done,s_next,n_planning_updates):
-        max_Q_sa_next = max(self.Q_sa[s_next])
-        p = abs(r + self.gamma * max_Q_sa_next - self.Q_sa[s,a])
-        #update priorities in queue
-        if p > self.priority_cutoff:
-            #Put (s,a) on the queue with priority p (needs a minus since the queue pops the smallest priority first)
-            self.queue.put((-p,(s,a)))
-        
-        self.transition_counts[s,a,s_next] += 1 #update transition counts
-        self.reward_sum[s,a,s_next] += r #update reward sum
-        self.simulation[s,a,s_next] = self.transition_counts[s,a,s_next]/np.sum(self.transition_counts[s, a, :]) #estimate transition function
-        
-        for k in range(n_planning_updates):
-            if self.queue.empty():
-                break
-              #Retrieve the top (s,a) from the queue
-            _,(s,a) = self.queue.get() # get the top (s,a) for the queue
-            #find s_next and r using (s,a) and model
-            s_prime = np.random.choice(range(self.n_states), p = self.simulation[s,a])
-            r_simulation = self.reward_sum[s,a,s_prime]/self.transition_counts[s,a,s_prime]
-            max_Q_sa_prime = max(self.Q_sa[s_prime])
-            self.Q_sa[s,a] = self.Q_sa[s,a] + self.learning_rate * (r_simulation + (self.gamma*max_Q_sa_prime) - self.Q_sa[s,a]) # update Q_sa
-            
-            for pre_s in range(self.n_states):
-                for pre_a in range(self.n_actions):
-                  reverse_model = self.transition_counts[pre_s,pre_a,s]/np.sum(self.transition_counts[:, :, s])
-                  if reverse_model > 0:
-                      pre_r = self.reward_sum[pre_s,pre_a,s]/self.transition_counts[pre_s,pre_a,s]
-                      p = abs(pre_r + self.gamma * max_Q_sa_next - self.Q_sa[pre_s,pre_a])
-                      if p > self.priority_cutoff:
-                        #Put (s,a) on the queue with priority p (needs a minus since the queue pops the smallest priority first)
-                        self.queue.put((-p,(s,a)))
-            
+        best_next_move = max(QLearningAgent.get_qvalue_possible_moves(self, state=next_state, possible_actions=possible_actions, q_array=q_array))
+
+        q_array[y_location][x_location] = q_array[y_location][x_location] + alpha*(reward + gamma*best_next_move - q_array[y_location][x_location]) #update the q_array so that the algorithm learns from it's moves
+
+        state = next_state
+        pass
+
 def test():
 
     n_timesteps = 1000
     gamma = 0.99
 
     # Algorithm parameters
-    policy = 'dyna' # 'ps' 
+    policy = 'dyna' # 'A2C' 
     epsilon = 0.1
     learning_rate = 0.5
     n_planning_updates = 5
@@ -131,8 +172,8 @@ def test():
     env = WindyGridworld()
     if policy == 'dyna':
         pi = DynaAgent(env.n_states,env.n_actions,learning_rate,gamma) # Initialize Dyna policy
-    elif policy == 'ps':    
-        pi = PrioritizedSweepingAgent(env.n_states,env.n_actions,learning_rate,gamma) # Initialize PS policy
+    elif policy == 'A2C':    
+        pi = A2C(env.n_states,env.n_actions,learning_rate,gamma) # Initialize A2C policy
     else:
         raise KeyError('Policy {} not implemented'.format(policy))
     

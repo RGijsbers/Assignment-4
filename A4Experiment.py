@@ -8,8 +8,8 @@ Bachelor AI, Leiden University, The Netherlands
 By Thomas Moerland
 """
 import numpy as np
-from MBRLEnvironment import WindyGridworld
-from MBRLAgents import DynaAgent,PrioritizedSweepingAgent
+from A4Environment import WindyGridworld
+from A4Agents import DynaAgent, A2C
 from Helper import LearningCurvePlot, smooth
 
 def run_repetitions(policy, n_repetitions, n_timesteps, smoothing_window, learning_rate, gamma,
@@ -21,8 +21,8 @@ def run_repetitions(policy, n_repetitions, n_timesteps, smoothing_window, learni
 
     if policy == 'Dyna': #check which agent needs to be made
         pi = DynaAgent(env.n_states,env.n_actions,learning_rate,gamma) #initialize Dyna agent
-    if policy == 'Prioritized Sweeping':
-        pi = PrioritizedSweepingAgent(env.n_states,env.n_actions,learning_rate,gamma) #initialize Prioritized Sweeping agent
+    if policy == 'A2C':
+        pi = A2C(env.n_states,env.n_actions,learning_rate,gamma) #initialize Prioritized Sweeping agent
 
     while repetition < n_repetitions: #do the right amount of repetitions
         s = env.reset()
@@ -52,7 +52,7 @@ def experiment():
     smoothing_window = 101
     gamma = 0.99
 
-    for policy in ['Dyna']: #,'Prioritized Sweeping'
+    for policy in ['Dyna']: #,'A2C'
     
         ##### Assignment a: effect of epsilon ######
         learning_rate = 0.5
