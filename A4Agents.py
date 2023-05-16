@@ -10,7 +10,8 @@ By Thomas Moerland
 import numpy as np
 import random
 import math
-from queue import PriorityQueue
+import torch
+import torch.nn as nn
 from A4Environment import WindyGridworld
 
 
@@ -55,7 +56,32 @@ class DynaAgent:
         pass
 
 
-class A2C:
+class A2CActor(nn.Module):
+    def __init__(self,  n_states, n_actions, learning_rate):
+        super(A2CActor, self).__init__()
+        self.fc1 = nn.Linear(n_states, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, n_actions)
+        self.weights = np.random.randint(-1, 1, size=(n_states, n_actions))
+        self.learning_rate = learning_rate
+
+    def select_action(self, s, epsilon):
+        highest_sa = max(self.weights[s]) #the best action according to the Q table
+        smart_action = np.where(self.weights[s] == highest_sa)[0][0] #get the right action number out of it
+
+        if np.random.rand() > epsilon: #do the smart action
+            a = smart_action
+        else:
+            a = np.random.randint(0,self.n_actions) #do a random action
+        return a
+
+    pass
+
+class A2CCritic:
+    pass
+
+
+class A2CAgent:
+
 
     pass
 
