@@ -94,35 +94,6 @@ class QLearningAgent(object):
         self.gamma = gamma
         self.Q_sa = np.zeros((self.n_states, self.n_actions))
     
-    # def get_qvalue_possible_moves(self, state, possible_actions, q_array):
-    #     possible_actions_qvalue_list = [0] * len(possible_actions)
-    #     y_location = int(state/12) #get 2D location from the 1D state
-    #     x_location = state%12
-
-    #     for action in possible_actions:
-    #         if action == 0:
-    #             if y_location == 0:
-    #                 possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
-    #             else:
-    #                 possible_actions_qvalue_list[action] = q_array[y_location-1][x_location]
-    #         if action == 1:
-    #             if y_location == 11:
-    #                 possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
-    #             else:
-    #                 possible_actions_qvalue_list[action] = q_array[y_location+1][x_location]
-    #         if action == 2:
-    #             if x_location == 0:
-    #                 possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
-    #             else:
-    #                 possible_actions_qvalue_list[action] = q_array[y_location][x_location-1]
-    #         if action == 3:
-    #             if x_location == 11:
-    #                 possible_actions_qvalue_list[action] = -100 #make sure the algorithm doesn't try to walk off the board
-    #             else:
-    #                 possible_actions_qvalue_list[action] = q_array[y_location][x_location+1]
-
-    #     return possible_actions_qvalue_list
-    
     def select_action(self, s, epsilon):
         highest_sa = max(self.Q_sa[s]) #the best action according to the Q table
         smart_action = np.where(self.Q_sa[s] == highest_sa)[0][0] #get the right action number out of it
@@ -150,7 +121,7 @@ def test():
     n_planning_updates = 5
 
     # Plotting parameters
-    plot = True
+    plot = False
     plot_optimal_policy = True
     step_pause = 0.0001
     
